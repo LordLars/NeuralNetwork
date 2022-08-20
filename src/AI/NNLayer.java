@@ -1,13 +1,13 @@
 package AI;
 
+import javax.xml.crypto.Data;
+
 public class NNLayer {
 
-    private float[][] weights;
-    private float[] biases;
     private final float[] neurons;
-    private int neuronCount;
+    private final int neuronCount;
 
-    private int preNeuronCount;
+    private final int preNeuronCount;
     private float[] preNeurons;
     private float[] nextChain;
 
@@ -16,11 +16,16 @@ public class NNLayer {
 
     private final ActivationFunction activationFunction;
 
+    private final NN nn;
+    private final int layerIndex;
 
-    public NNLayer(int preNeuronCount, int neuronCount, ActivationFunction activationFunction, float nLernRate) {
+    public NNLayer(int preNeuronCount, int neuronCount, ActivationFunction activationFunction, float nLernRate, NN nn, int layerIndex) {
         this.preNeuronCount = preNeuronCount;
         this.neuronCount = neuronCount;
         this.activationFunction = activationFunction;
+        this.nn = nn;
+        this.layerIndex = layerIndex;
+
         neurons = new float[neuronCount];
         lernRate = nLernRate;
         buildLayer();
@@ -30,17 +35,17 @@ public class NNLayer {
     /**
      * Builds a new Layer with random weights and biases
      */
-    private void buildLayer() {
-        weights = new float[neuronCount][preNeuronCount];
-        biases = new float[neuronCount];
+    public void buildLayer() {
+        nn.weights[layerIndex] = new float[neuronCount][preNeuronCount];
+        nn.biases[layerIndex] = new float[neuronCount];
 
         for(int i = 0; i < neuronCount; i++) {
             for(int j = 0; j < preNeuronCount; j++) {
-                weights[i][j] = (float) (Math.random() * 2-1);
+                nn.weights[layerIndex][i][j] = (float) (Math.random() * 2-1);
             }
         }
         for(int i = 0; i < neuronCount; i++) {
-            biases[i] = (float) (Math.random() * 2 -1);
+            nn.biases[layerIndex][i] = (float) (Math.random() * 2 -1);
         }
     }
     //endregion
@@ -52,7 +57,7 @@ public class NNLayer {
      */
     public float[] propagation(float[] input) {
         preNeurons = input;
-        for(int i = 0; i < neuronCount; i++) neurons[i] = activationFunction.activation(add(i) + biases[i]);
+        for(int i = 0; i < neuronCount; i++) neurons[i] = activationFunction.activation(add(i) + nn.biases[layerIndex][i]);
         return neurons;
     }
 
@@ -63,7 +68,9 @@ public class NNLayer {
      */
     private float add(int index) {
         float sum = 0;
-        for(int j = 0; j < preNeurons.length; j++) sum += preNeurons[j] * weights[index][j];
+        for(int j = 0; j < preNeurons.length; j++){
+            sum += preNeurons[j] * nn.weights[layerIndex][index][j];
+        }
         return sum;
     }
 
@@ -87,7 +94,7 @@ public class NNLayer {
     private void updateWeights(){
         for(int i = 0; i < neuronCount; i++) {
             for(int j = 0; j < preNeuronCount; j++) {
-                weights[i][j] = weights[i][j] - chain[i] * preNeurons[j] * lernRate;
+                nn.weightGradients[layerIndex][i][j] += chain[i] * preNeurons[j] * lernRate;
             }
         }
     }
@@ -96,7 +103,7 @@ public class NNLayer {
      * Updates the biases with the backpropagation method
      */
     private void updateBiases(){
-        for(int i = 0; i < neuronCount; i++) biases[i] = biases[i] - chain[i] * lernRate;
+        for(int i = 0; i < neuronCount; i++) nn.biasGradients[layerIndex][i] += chain[i] * lernRate;
     }
 
     /**
@@ -106,10 +113,10 @@ public class NNLayer {
     private void updateChain(float[] targets) {
         chain = new float[neuronCount];
         nextChain = new float[preNeuronCount];
-        for(int i = 0; i < neuronCount; i++) chain[i] = targets[i] * activationFunction.activationDerivative(add(i) + biases[i]);
+        for(int i = 0; i < neuronCount; i++) chain[i] = targets[i] * activationFunction.activationDerivative(add(i) + nn.biases[layerIndex][i]);
         for(int i = 0; i < preNeuronCount; i++) {
             float chainSum = 0;
-            for(int j = 0; j < neuronCount; j++) chainSum += chain[j] * weights[j][i];
+            for(int j = 0; j < neuronCount; j++) chainSum += chain[j] * nn.weights[layerIndex][j][i];
             nextChain[i] = chainSum;
         }
     }
@@ -125,33 +132,10 @@ public class NNLayer {
         return nextChain;
     }
 
-    //endregion
-
-    //region SAVE & LOAD
-
-    /**
-     * Saves the values of the layer
-     * @return Data of the layer
-     */
-    public NNLayerData save(){
-        NNLayerData daten = new NNLayerData();
-        daten.biases = biases;
-        daten.weights = weights;
-        daten.neuronCount = neuronCount;
-        daten.preNeuronCount = preNeuronCount;
-        return daten;
-    }
-
-    /**
-     * Loads the saved Data
-     * @param daten saved Data
-     */
-    public void load(NNLayerData daten){
-        biases = daten.biases;
-        weights = daten.weights;
-        neuronCount = daten.neuronCount;
-        preNeuronCount = daten.preNeuronCount;
+    public float[] getNeurons(){
+        return neurons;
     }
 
     //endregion
+
 }

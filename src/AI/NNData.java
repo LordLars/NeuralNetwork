@@ -8,6 +8,8 @@ public class NNData implements Serializable{
      * Saved Data of the NN
      */
     public NNLayerData[] nnLayerData;
+    public float[][][] weights;
+    public float[][] biases;
     public float accuracy;
 
 }
